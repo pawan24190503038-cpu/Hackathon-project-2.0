@@ -1,22 +1,26 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { Heart, Menu, X, User, LogIn } from 'lucide-react';
-import { useState } from 'react';
+import { Heart, Menu, X, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+import { FloatingChatButton } from './FloatingChatButton';
+import { AnimatedBackground } from './AnimatedBackground';
 
 export function Layout() {
   const location = useLocation();
-  const { user, isAuthenticated, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const navItems = [
     { path: '/', label: 'Home' },
@@ -26,15 +30,19 @@ export function Layout() {
     { path: '/crisis', label: 'Crisis Support' },
   ];
 
-  const handleSignOut = () => {
-    signOut();
-    setMobileMenuOpen(false);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen relative">
+      <AnimatedBackground />
+      
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-purple-100 sticky top-0 z-50">
+      <motion.header
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+        className={`${
+          scrolled ? 'bg-white/90 shadow-lg' : 'bg-white/80'
+        } backdrop-blur-md border-b border-purple-100 sticky top-0 z-50 transition-all duration-300`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -48,65 +56,44 @@ export function Layout() {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-1">
-              <nav className="flex items-center gap-1">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`px-4 py-2 rounded-lg transition-colors ${
-                      location.pathname === item.path
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'text-gray-600 hover:bg-purple-50 hover:text-purple-600'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-
+            <nav className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    location.pathname === item.path
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'text-gray-600 hover:bg-purple-50 hover:text-purple-600'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              
               {/* Auth Section */}
-              <div className="ml-4 pl-4 border-l border-gray-200">
-                {isAuthenticated ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
-                            {user?.isAnonymous ? '?' : user?.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium text-gray-700">
-                          {user?.isAnonymous ? 'Anonymous' : user?.name.split(' ')[0]}
-                        </span>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile" className="cursor-pointer">
-                          <User className="w-4 h-4 mr-2" />
-                          Profile
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600">
-                        <LogIn className="w-4 h-4 mr-2" />
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Link to="/sign-in">
-                    <Button size="sm" variant="outline">
-                      <LogIn className="w-4 h-4 mr-2" />
-                      Sign In
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </div>
+              {isAuthenticated && user ? (
+                <Link to="/profile" className="ml-2">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-purple-50 transition-colors">
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className={`bg-gradient-to-br ${user.avatarColor} text-white text-sm`}>
+                        {user.isAnonymous ? '?' : user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium text-gray-700">
+                      {user.isAnonymous ? 'Anonymous' : user.name.split(' ')[0]}
+                    </span>
+                  </div>
+                </Link>
+              ) : (
+                <Link to="/sign-in" className="ml-2">
+                  <Button size="sm">
+                    <User className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Button>
+                </Link>
+              )}
+            </nav>
 
             {/* Mobile Menu Button */}
             <Button
@@ -139,46 +126,43 @@ export function Layout() {
                 </Link>
               ))}
               
-              <div className="pt-2 mt-2 border-t border-gray-200">
-                {isAuthenticated ? (
-                  <>
-                    <Link
-                      to="/profile"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-600 hover:bg-purple-50 hover:text-purple-600"
-                    >
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
-                          {user?.isAnonymous ? '?' : user?.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{user?.isAnonymous ? 'Anonymous User' : user?.name}</p>
-                        <p className="text-xs text-gray-500">View Profile</p>
-                      </div>
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 mt-2"
-                    >
-                      Sign Out
-                    </button>
-                  </>
+              {/* Mobile Auth Section */}
+              <div className="pt-2 border-t border-purple-100">
+                {isAuthenticated && user ? (
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-colors"
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className={`bg-gradient-to-br ${user.avatarColor} text-white text-sm`}>
+                        {user.isAnonymous ? '?' : user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {user.isAnonymous ? 'Anonymous User' : user.name}
+                      </p>
+                      <p className="text-xs text-gray-500">View Profile</p>
+                    </div>
+                  </Link>
                 ) : (
                   <Link
                     to="/sign-in"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-2 rounded-lg text-gray-600 hover:bg-purple-50 hover:text-purple-600"
+                    className="block"
                   >
-                    <LogIn className="w-4 h-4 inline mr-2" />
-                    Sign In
+                    <Button className="w-full">
+                      <User className="w-4 h-4 mr-2" />
+                      Sign In
+                    </Button>
                   </Link>
                 )}
               </div>
             </nav>
           </div>
         )}
-      </header>
+      </motion.header>
 
       {/* Main Content */}
       <main className="min-h-[calc(100vh-4rem)]">
@@ -200,6 +184,9 @@ export function Layout() {
           </div>
         </div>
       </footer>
+      
+      {/* Floating Chat Button */}
+      <FloatingChatButton />
     </div>
   );
 }

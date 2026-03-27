@@ -1,44 +1,35 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
-import { Badge } from '../components/ui/badge';
-import { Separator } from '../components/ui/separator';
-import { Switch } from '../components/ui/switch';
-import { useNavigate } from 'react-router';
-import { User, Mail, Calendar, Edit2, Save, X, Shield, Eye, EyeOff, LogOut } from 'lucide-react';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { Badge } from '../components/ui/badge';
+import { User, Mail, Calendar, Shield, ShieldOff, LogOut, Edit2, Save, X, Eye, EyeOff, Info } from 'lucide-react';
 
 export function Profile() {
-  const { user, updateProfile, toggleAnonymousMode, signOut } = useAuth();
   const navigate = useNavigate();
+  const { user, signOut, toggleAnonymousMode, updateProfile, isAuthenticated } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    bio: user?.bio || '',
-    pronouns: user?.pronouns || '',
-  });
+  const [editedName, setEditedName] = useState(user?.name || '');
+  const [editedEmail, setEditedEmail] = useState(user?.email || '');
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     navigate('/sign-in');
     return null;
   }
 
   const handleSave = () => {
-    updateProfile(formData);
+    updateProfile({ name: editedName, email: editedEmail });
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setFormData({
-      name: user.name,
-      bio: user.bio || '',
-      pronouns: user.pronouns || '',
-    });
+    setEditedName(user.name);
+    setEditedEmail(user.email);
     setIsEditing(false);
   };
 
@@ -47,13 +38,16 @@ export function Profile() {
     navigate('/');
   };
 
+  const displayName = user.isAnonymous ? 'Anonymous User' : user.name;
+  const displayEmail = user.isAnonymous ? 'hidden@anonymous.com' : user.email;
+
   return (
     <div className="w-full">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="max-w-3xl">
-            <h1 className="text-4xl md:text-5xl mb-4">My Profile</h1>
+            <h1 className="text-4xl md:text-5xl mb-4">Your Profile</h1>
             <p className="text-xl text-purple-100">
               Manage your account settings and privacy preferences
             </p>
@@ -61,213 +55,219 @@ export function Profile() {
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
-        {/* Anonymous Mode Alert */}
-        {user.isAnonymous && (
-          <Alert className="border-amber-200 bg-amber-50">
-            <Shield className="w-4 h-4 text-amber-600" />
-            <AlertDescription className="text-amber-800">
-              <strong>Anonymous Mode is active.</strong> Your name and personal information are hidden from other users.
-              You can still access all features of MindSpace.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Profile Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <Avatar className="w-20 h-20">
-                  <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-2xl">
+      {/* Profile Content */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Profile Overview Card */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader className="text-center pb-4">
+                <Avatar className="w-24 h-24 mx-auto mb-4">
+                  <AvatarFallback className={`bg-gradient-to-br ${user.avatarColor} text-white text-3xl`}>
                     {user.isAnonymous ? '?' : user.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <CardTitle className="text-2xl">
-                    {user.isAnonymous ? 'Anonymous User' : user.name}
-                  </CardTitle>
-                  {user.pronouns && !user.isAnonymous && (
-                    <p className="text-sm text-gray-600 mt-1">{user.pronouns}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="secondary" className="text-xs">
-                      Member since {user.joinedDate}
+                <CardTitle className="text-2xl">{displayName}</CardTitle>
+                <CardDescription>{displayEmail}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Joined
+                  </span>
+                  <span className="font-medium text-gray-900">{user.joinedDate}</span>
+                </div>
+
+                <div className="pt-4 border-t">
+                  {user.isAnonymous ? (
+                    <Badge variant="outline" className="w-full justify-center py-2 text-orange-600 border-orange-600">
+                      <ShieldOff className="w-4 h-4 mr-2" />
+                      Anonymous Mode Active
                     </Badge>
-                    {user.isAnonymous && (
-                      <Badge variant="outline" className="text-xs text-amber-700 border-amber-300">
-                        Anonymous
-                      </Badge>
-                    )}
-                  </div>
+                  ) : (
+                    <Badge variant="outline" className="w-full justify-center py-2 text-green-600 border-green-600">
+                      <Shield className="w-4 h-4 mr-2" />
+                      Public Profile
+                    </Badge>
+                  )}
                 </div>
-              </div>
-              {!isEditing ? (
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  Edit Profile
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
                 </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleCancel}>
-                    <X className="w-4 h-4 mr-2" />
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleSave}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isEditing ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Your name"
-                  />
-                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="pronouns">Pronouns (Optional)</Label>
-                  <Input
-                    id="pronouns"
-                    value={formData.pronouns}
-                    onChange={(e) => setFormData({ ...formData, pronouns: e.target.value })}
-                    placeholder="e.g., they/them, she/her, he/him"
-                  />
+          {/* Settings Cards */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Anonymous Mode Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {user.isAnonymous ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      Anonymous Mode
+                    </CardTitle>
+                    <CardDescription className="mt-2">
+                      Hide your personal information while still accessing all features
+                    </CardDescription>
+                  </div>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert className={user.isAnonymous ? "border-orange-200 bg-orange-50" : "border-blue-200 bg-blue-50"}>
+                  <Info className={`h-4 w-4 ${user.isAnonymous ? 'text-orange-600' : 'text-blue-600'}`} />
+                  <AlertDescription className={user.isAnonymous ? 'text-orange-800' : 'text-blue-800'}>
+                    {user.isAnonymous ? (
+                      <>
+                        <strong>Anonymous mode is ON.</strong> Your name and email are hidden from others. You'll appear as "Anonymous User" in all interactions.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Anonymous mode is OFF.</strong> Your name is visible to other users in community interactions.
+                      </>
+                    )}
+                  </AlertDescription>
+                </Alert>
 
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio (Optional)</Label>
-                  <Textarea
-                    id="bio"
-                    value={formData.bio}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    placeholder="Tell us a bit about yourself..."
-                    className="min-h-24"
-                  />
-                </div>
-              </>
-            ) : (
-              <>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-gray-700">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p>{user.isAnonymous ? '••••••@••••••.com' : user.email}</p>
+                  <h4 className="font-medium text-sm text-gray-900">What happens in Anonymous Mode:</h4>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-start gap-2">
+                      <ShieldOff className="w-4 h-4 mt-0.5 text-gray-500 flex-shrink-0" />
+                      <span>Your name appears as "Anonymous User" in forums and groups</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <ShieldOff className="w-4 h-4 mt-0.5 text-gray-500 flex-shrink-0" />
+                      <span>Your email is hidden from other users</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Shield className="w-4 h-4 mt-0.5 text-gray-500 flex-shrink-0" />
+                      <span>You can still access all features including support groups and events</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Shield className="w-4 h-4 mt-0.5 text-gray-500 flex-shrink-0" />
+                      <span>You can toggle this setting on or off at any time</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <Button
+                  onClick={toggleAnonymousMode}
+                  className="w-full"
+                  variant={user.isAnonymous ? "outline" : "default"}
+                >
+                  {user.isAnonymous ? (
+                    <>
+                      <Eye className="w-4 h-4 mr-2" />
+                      Disable Anonymous Mode
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="w-4 h-4 mr-2" />
+                      Enable Anonymous Mode
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Account Information Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="w-5 h-5" />
+                      Account Information
+                    </CardTitle>
+                    <CardDescription className="mt-2">
+                      Update your personal details
+                    </CardDescription>
+                  </div>
+                  {!isEditing && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Full Name</Label>
+                      <Input
+                        id="edit-name"
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        placeholder="Enter your name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editedEmail}
+                        onChange={(e) => setEditedEmail(e.target.value)}
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleSave} className="flex-1">
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </Button>
+                      <Button onClick={handleCancel} variant="outline" className="flex-1">
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </Button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3 text-gray-700">
-                    <Calendar className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Member Since</p>
-                      <p>{user.joinedDate}</p>
-                    </div>
-                  </div>
-
-                  {user.bio && !user.isAnonymous && (
-                    <div className="flex items-start gap-3 text-gray-700">
-                      <User className="w-5 h-5 text-gray-400 mt-1" />
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <User className="w-5 h-5 text-gray-500" />
                       <div>
-                        <p className="text-sm text-gray-500">Bio</p>
-                        <p className="text-gray-700 whitespace-pre-wrap">{user.bio}</p>
+                        <p className="text-xs text-gray-600">Name</p>
+                        <p className="font-medium text-gray-900">{user.name}</p>
                       </div>
                     </div>
-                  )}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <Mail className="w-5 h-5 text-gray-500" />
+                      <div>
+                        <p className="text-xs text-gray-600">Email</p>
+                        <p className="font-medium text-gray-900">{user.email}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Privacy Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              Privacy Settings
-            </CardTitle>
-            <CardDescription>
-              Control how your information is displayed to others
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  {user.isAnonymous ? (
-                    <EyeOff className="w-5 h-5 text-amber-600" />
-                  ) : (
-                    <Eye className="w-5 h-5 text-green-600" />
-                  )}
-                  <h3 className="font-medium">Anonymous Mode</h3>
-                </div>
-                <p className="text-sm text-gray-600">
-                  When enabled, your name and personal information will be hidden from other users. 
-                  You'll appear as "Anonymous User" in all community interactions. You can still access 
-                  all features including support groups, forums, and events.
-                </p>
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    <strong>What's hidden:</strong> Name, email, bio, pronouns
-                  </p>
-                  <p className="text-sm text-blue-800 mt-1">
-                    <strong>What's still visible:</strong> Your posts and participation (shown as "Anonymous User")
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={user.isAnonymous}
-                onCheckedChange={toggleAnonymousMode}
-                className="mt-1"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Account Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Actions</CardTitle>
-            <CardDescription>
-              Manage your account settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              variant="outline" 
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={handleSignOut}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Help Section */}
-        <Card className="bg-purple-50 border-purple-200">
-          <CardContent className="p-6">
-            <h3 className="font-medium mb-2">Need Help?</h3>
-            <p className="text-sm text-gray-700 mb-4">
-              If you have questions about your account, privacy settings, or need support, 
-              please don't hesitate to reach out.
-            </p>
-            <Button variant="outline" size="sm">
-              Contact Support
-            </Button>
-          </CardContent>
-        </Card>
+            {/* Privacy Notice */}
+            <Alert className="border-purple-200 bg-purple-50">
+              <Shield className="h-4 w-4 text-purple-600" />
+              <AlertDescription className="text-purple-800">
+                <strong>Your privacy is important.</strong> MindSpace is designed to support your mental health journey with full respect for your privacy. All your data is stored securely, and you have complete control over what you share.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
       </section>
     </div>
   );
